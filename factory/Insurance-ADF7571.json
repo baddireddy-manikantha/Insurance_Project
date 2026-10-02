@@ -1,0 +1,15 @@
+{
+	"name": "Insurance-ADF7571",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "indiasouthcentral",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "80302856-d06a-4063-be3d-45f5469dd20b",
+		"tenantId": "4127365a-69cb-4590-8407-51786d7bed73"
+	}
+}
