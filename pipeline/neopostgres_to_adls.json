@@ -48,21 +48,69 @@
 					"batchCount": 3,
 					"activities": [
 						{
-							"name": "test",
-							"type": "SetVariable",
+							"name": "copy into adls from postgres",
+							"type": "Copy",
 							"dependsOn": [],
 							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
 								"secureOutput": false,
 								"secureInput": false
 							},
 							"userProperties": [],
 							"typeProperties": {
-								"variableName": "table_name",
-								"value": {
-									"value": "@item().source_table_name",
-									"type": "Expression"
+								"source": {
+									"type": "PostgreSqlV2Source",
+									"query": {
+										"value": "@concat('SELECT * FROM ',item().source_table_name)",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
 								}
-							}
+							},
+							"inputs": [
+								{
+									"referenceName": "PostgreSqlTable_DS",
+									"type": "DatasetReference",
+									"parameters": {
+										"table_name": {
+											"value": "@concat('public','.',item().source_table_name)",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Parquet_DS",
+									"type": "DatasetReference",
+									"parameters": {
+										"folder_name": {
+											"value": "@concat(item().source_table_name,formatDateTime(utcNow(),'dd-mm-yyyy'))",
+											"type": "Expression"
+										}
+									}
+								}
+							]
 						}
 					]
 				}
