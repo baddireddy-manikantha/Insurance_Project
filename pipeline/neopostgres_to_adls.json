@@ -108,7 +108,11 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"folder_name": {
-											"value": "@concat(item().source_schema_name,'/',item().source_table_name)",
+											"value": "@item().source_schema_name",
+											"type": "Expression"
+										},
+										"source_name": {
+											"value": "@item().source_schema_name",
 											"type": "Expression"
 										}
 									}
