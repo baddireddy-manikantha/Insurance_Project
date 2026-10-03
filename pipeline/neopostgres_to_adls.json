@@ -108,7 +108,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"folder_name": {
-											"value": "@concat(item().source_schema_name,item().source_table_name,'/',variables('start_date'))",
+											"value": "@concat(item().source_schema_name,'/',item().source_table_name,'/',variables('start_date'))",
 											"type": "Expression"
 										},
 										"source_name": {
