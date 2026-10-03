@@ -1,0 +1,23 @@
+{
+	"name": "AzureSqlDatabase_LS",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"server": "insurance.database.windows.net",
+			"database": "Insurance",
+			"encrypt": "optional",
+			"trustServerCertificate": false,
+			"authenticationType": "SQL",
+			"userName": "mani",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "AzureKeyVault_LS",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "sqlpwd"
+			}
+		}
+	}
+}
