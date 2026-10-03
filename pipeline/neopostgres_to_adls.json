@@ -50,7 +50,14 @@
 						{
 							"name": "copy into adls from postgres",
 							"type": "Copy",
-							"dependsOn": [],
+							"dependsOn": [
+								{
+									"activity": "print tables",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
 							"policy": {
 								"timeout": "0.12:00:00",
 								"retry": 0,
@@ -107,11 +114,33 @@
 									}
 								}
 							]
+						},
+						{
+							"name": "print tables",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "table",
+								"value": {
+									"value": "@item().source_table_name",
+									"type": "Expression"
+								}
+							}
 						}
 					]
 				}
 			}
 		],
+		"variables": {
+			"table": {
+				"type": "String"
+			}
+		},
 		"folder": {
 			"name": "Insurance"
 		},
