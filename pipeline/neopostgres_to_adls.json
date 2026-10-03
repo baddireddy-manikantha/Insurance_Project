@@ -108,7 +108,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"folder_name": {
-											"value": "@item().source_schema_name",
+											"value": "@concat(item().source_table_name,'/',variables('start_date'))",
 											"type": "Expression"
 										},
 										"source_name": {
@@ -129,9 +129,9 @@
 							},
 							"userProperties": [],
 							"typeProperties": {
-								"variableName": "table",
+								"variableName": "start_date",
 								"value": {
-									"value": "@item().source_table_name",
+									"value": "@formatDateTime(utcNow(),'dd-mm-yyyy')",
 									"type": "Expression"
 								}
 							}
@@ -142,6 +142,9 @@
 		],
 		"variables": {
 			"table": {
+				"type": "String"
+			},
+			"start_date": {
 				"type": "String"
 			}
 		},
