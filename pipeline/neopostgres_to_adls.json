@@ -105,7 +105,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"folder_name": {
-											"value": "@concat(item().source_table_name,formatDateTime(utcNow(),'dd-mm-yyyy'))",
+											"value": "@concat(item().source_table_name,'/',formatDateTime(utcNow(),'dd-mm-yyyy'))",
 											"type": "Expression"
 										}
 									}
@@ -116,11 +116,6 @@
 				}
 			}
 		],
-		"variables": {
-			"table_name": {
-				"type": "String"
-			}
-		},
 		"folder": {
 			"name": "Insurance"
 		},
