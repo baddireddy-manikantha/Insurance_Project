@@ -1,0 +1,21 @@
+{
+	"name": "PostgreSqlTable_DS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "PostgreSql_LS",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"table_name": {
+				"type": "string"
+			},
+			"schema_name": {
+				"type": "string",
+				"defaultValue": "public"
+			}
+		},
+		"annotations": [],
+		"type": "PostgreSqlV2Table",
+		"schema": []
+	}
+}
