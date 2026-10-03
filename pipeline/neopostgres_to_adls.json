@@ -54,7 +54,7 @@
 								{
 									"activity": "print tables",
 									"dependencyConditions": [
-										"Failed"
+										"Succeeded"
 									]
 								}
 							],
