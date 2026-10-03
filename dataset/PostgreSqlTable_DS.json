@@ -14,7 +14,7 @@
 		"type": "PostgreSqlV2Table",
 		"schema": [],
 		"typeProperties": {
-			"schema": "public",
+			"schema": "",
 			"table": {
 				"value": "@dataset().table_name",
 				"type": "Expression"

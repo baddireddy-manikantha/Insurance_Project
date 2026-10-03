@@ -101,7 +101,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"folder_name": {
-											"value": "@concat(item().source_table_name,'/',formatDateTime(utcNow(),'dd-mm-yyyy'))",
+											"value": "@split(item().source_table_name,'.')[0]",
 											"type": "Expression"
 										}
 									}
