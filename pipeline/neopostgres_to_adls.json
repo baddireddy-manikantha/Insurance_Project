@@ -62,10 +62,6 @@
 							"typeProperties": {
 								"source": {
 									"type": "PostgreSqlV2Source",
-									"query": {
-										"value": "@concat('SELECT * FROM ','public.',item().source_table_name)",
-										"type": "Expression"
-									},
 									"queryTimeout": "02:00:00"
 								},
 								"sink": {
@@ -93,7 +89,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"table_name": {
-											"value": "@concat('public','.',item().source_table_name)",
+											"value": "@item().source_table_name",
 											"type": "Expression"
 										}
 									}
