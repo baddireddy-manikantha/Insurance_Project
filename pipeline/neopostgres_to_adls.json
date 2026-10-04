@@ -167,20 +167,20 @@
 										"value": "@item().source_table_name",
 										"type": "Expression"
 									},
-									"date_timestamp": {
-										"value": "@variables('start_date')",
+									"watermark_col": {
+										"value": "@item().wartermark_column",
 										"type": "Expression"
 									},
-									"Load_Type": {
-										"value": "@item().load_type",
+									"date_timestamp": {
+										"value": "@variables('start_date')",
 										"type": "Expression"
 									},
 									"merge_key": {
 										"value": "@item().merge_keys",
 										"type": "Expression"
 									},
-									"watermark_col": {
-										"value": "@item().wartermark_column",
+									"Load_Type": {
+										"value": "@item().load_type",
 										"type": "Expression"
 									}
 								}
