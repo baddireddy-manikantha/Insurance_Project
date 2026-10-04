@@ -52,7 +52,7 @@
 							"type": "Copy",
 							"dependsOn": [
 								{
-									"activity": "print tables",
+									"activity": "Load Type check",
 									"dependencyConditions": [
 										"Succeeded"
 									]
@@ -69,6 +69,10 @@
 							"typeProperties": {
 								"source": {
 									"type": "PostgreSqlV2Source",
+									"query": {
+										"value": "@concat(\n    'SELECT * FROM ',\n    item().source_table_name,\n    if(\n        equals(item().load_type,'FULL'),\n        '',\n        concat(\n            ' WHERE ',\n            item().merge_keys,\n            ' > ',\n            '''',\n            variables('watermark_date'),\n            ''''\n        )\n    )\n)",
+										"type": "Expression"
+									},
 									"queryTimeout": "02:00:00"
 								},
 								"sink": {
@@ -169,6 +173,10 @@
 									},
 									"Load_Type": {
 										"value": "@item().load_type",
+										"type": "Expression"
+									},
+									"Merge Key": {
+										"value": "@item().merge_keys",
 										"type": "Expression"
 									}
 								}
@@ -285,16 +293,98 @@
 								],
 								"scriptBlockExecutionTimeout": "02:00:00"
 							}
+						},
+						{
+							"name": "Load Type check",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "print tables",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@not(equals(item().load_type,'FULL'))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Lookupforwayermark",
+										"type": "Lookup",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "AzureSqlSource",
+												"sqlReaderQuery": {
+													"value": "@concat('SELECT WATERMARK_VALUE FROM ctrl.WATERMARK\nWHERE TABLE_ID=',pipeline().parameters.table_id)",
+													"type": "Expression"
+												},
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None"
+											},
+											"dataset": {
+												"referenceName": "AzureSqlTables_DS",
+												"type": "DatasetReference"
+											},
+											"firstRowOnly": false
+										}
+									},
+									{
+										"name": "watermark",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Lookupforwayermark",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "watermark_date",
+											"value": {
+												"value": "@activity('Lookupforwayermark').output.watermark_value",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
 						}
 					]
 				}
 			}
 		],
+		"parameters": {
+			"table_id": {
+				"type": "string"
+			}
+		},
 		"variables": {
 			"table": {
 				"type": "String"
 			},
 			"start_date": {
+				"type": "String"
+			},
+			"watermark_date": {
 				"type": "String"
 			}
 		},
