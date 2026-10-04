@@ -135,6 +135,47 @@
 									"type": "Expression"
 								}
 							}
+						},
+						{
+							"name": "landing to bronze",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "copy into adls from postgres",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Users/baddireddy.manikantha@gmail.com/adls connection test",
+								"baseParameters": {
+									"table_name": {
+										"value": "@item().source_table_name",
+										"type": "Expression"
+									},
+									"date_timestamp": {
+										"value": "@variables('start_date')",
+										"type": "Expression"
+									},
+									"Load_Type": {
+										"value": "@item().load_type",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricks_LS",
+								"type": "LinkedServiceReference"
+							}
 						}
 					]
 				}
