@@ -168,7 +168,7 @@
 										"type": "Expression"
 									},
 									"watermark_col": {
-										"value": "@item().wartermark_column",
+										"value": "@item().watermark_column",
 										"type": "Expression"
 									},
 									"date_timestamp": {
