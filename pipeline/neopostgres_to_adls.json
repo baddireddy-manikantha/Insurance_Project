@@ -364,7 +364,7 @@
 										"typeProperties": {
 											"variableName": "watermark_date",
 											"value": {
-												"value": "@activity('Lookupforwayermark').output.watermark_value",
+												"value": "@activity('Lookupforwayermark').output.WATERMARK_VALUE",
 												"type": "Expression"
 											}
 										}
