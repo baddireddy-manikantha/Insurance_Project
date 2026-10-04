@@ -206,7 +206,7 @@
 									{
 										"type": "Query",
 										"text": {
-											"value": "@concat(\n'INSERT INTO ctrl.audit_log(adf_run_id,table_id,stage,status,records_written,start_time,end_time,created_timestamp) VALUES(',\n'''',pipeline().RunId,''',',\n'''',string(item().table_id),''',',\n'''SOURCE_TO_LANDING'',',\n'''IN-PROGRESS'',',\n'NULL,',\n'current_timestamp(),',\n'NULL,',\n'current_timestamp()',\n')')",
+											"value": "@concat(\n'INSERT INTO ctrl.audit_log (adf_run_id, table_id, stage, status, records_written, start_time, end_time, created_timestamp) VALUES (',\n'''', pipeline().RunId, ''', ',\nstring(item().table_id), ', ',\n'''SOURCE_TO_LANDING'', ',\n'''IN-PROGRESS'', ',\n'NULL, ',\n'GETDATE(), ',\n'NULL, ',\n'GETDATE()',\n')'\n)",
 											"type": "Expression"
 										}
 									}
