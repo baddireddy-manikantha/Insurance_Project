@@ -176,11 +176,11 @@
 										"type": "Expression"
 									},
 									"merge_key": {
-										"value": "@item().merge_keys",
+										"value": "@if(\n    empty(item().merge_keys),\n    '',\n    string(item().merge_keys)\n)",
 										"type": "Expression"
 									},
 									"watermark_col": {
-										"value": "@item().watermark_column",
+										"value": "@if(\n    empty(item().wartermark_column),\n    '',\n    string(item().wartermark_column)\n)",
 										"type": "Expression"
 									}
 								}
