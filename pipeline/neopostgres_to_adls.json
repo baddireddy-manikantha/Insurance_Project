@@ -178,6 +178,10 @@
 									"Merge Key": {
 										"value": "@item().merge_keys",
 										"type": "Expression"
+									},
+									"Watermark Column": {
+										"value": "@variables('watermark_date')",
+										"type": "Expression"
 									}
 								}
 							},
