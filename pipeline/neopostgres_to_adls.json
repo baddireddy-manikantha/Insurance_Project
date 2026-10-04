@@ -96,7 +96,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"table_name": {
-											"value": "@item().source_table_",
+											"value": "@item().source_table_name",
 											"type": "Expression"
 										},
 										"schema_name": "public"
@@ -242,7 +242,7 @@
 									{
 										"type": "Query",
 										"text": {
-											"value": "@concat(\n'UPDATE ctrl.audit_log SET status=''COMPLETED'', end_time=GETDATE(), records_written=',\nstring(activity('copy into adls from postgres').output.rowsCopied),\n' WHERE table_id=',\n'''',string(item().table_id),''''\n)",
+											"value": "@concat(\n'UPDATE ctrl.audit_log SET status=''COMPLETED'', end_time=GETDATE(), records_written=',\nstring(activity('copy into adls from postgres').output.rowsCopied),\n' WHERE table_id=',\n'''',string(item().table_id),'''',\n'AND status=''IN-PROGRESS'''\n)",
 											"type": "Expression"
 										}
 									}
