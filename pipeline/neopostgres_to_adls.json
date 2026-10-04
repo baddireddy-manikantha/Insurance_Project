@@ -175,11 +175,11 @@
 										"value": "@item().load_type",
 										"type": "Expression"
 									},
-									"Merge Key": {
+									"merge_key": {
 										"value": "@item().merge_keys",
 										"type": "Expression"
 									},
-									"Watermark Column": {
+									"watermark_col": {
 										"value": "@variables('watermark_date')",
 										"type": "Expression"
 									}
