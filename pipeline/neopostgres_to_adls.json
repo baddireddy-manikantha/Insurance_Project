@@ -332,7 +332,7 @@
 											"source": {
 												"type": "AzureSqlSource",
 												"sqlReaderQuery": {
-													"value": "@concat('SELECT WATERMARK_VALUE FROM ctrl.WATERMARK\nWHERE TABLE_ID=',item().source_table_name)",
+													"value": "@concat('SELECT WATERMARK_VALUE FROM ctrl.WATERMARK\nWHERE TABLE_ID=',item().table_id)",
 													"type": "Expression"
 												},
 												"queryTimeout": "02:00:00",
