@@ -376,11 +376,6 @@
 				}
 			}
 		],
-		"parameters": {
-			"table_id": {
-				"type": "string"
-			}
-		},
 		"variables": {
 			"table": {
 				"type": "String"
