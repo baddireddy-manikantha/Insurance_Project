@@ -1,0 +1,668 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "Insurance-ADF7571"
+		},
+		"AzureDataLakeStorage_LS_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage_LS'"
+		},
+		"AzureDataLakeStorage_LS_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://insurancelake7571.dfs.core.windows.net/"
+		},
+		"AzureDatabricks_LS_properties_typeProperties_existingClusterId": {
+			"type": "string",
+			"defaultValue": "1003-081821-g9dncrdn"
+		},
+		"AzureKeyVault_LS_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://insurance-keys.vault.azure.net/"
+		},
+		"AzureSqlDatabase_LS_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "insurance.database.windows.net"
+		},
+		"AzureSqlDatabase_LS_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "Insurance"
+		},
+		"AzureSqlDatabase_LS_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "mani"
+		},
+		"PostgreSql_LS_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "ep-falling-shape-ay5z3m2d-pooler.c-5.us-east-2.aws.neon.tech"
+		},
+		"PostgreSql_LS_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "insurance"
+		},
+		"PostgreSql_LS_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "neondb_owner"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/neopostgres_to_adls')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "fetch neopostgres tables",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 1,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT * FROM ctrl.table_config\nwhere is_active=1;",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTables_DS",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "Iterate all the tables",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "fetch neopostgres tables",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('fetch neopostgres tables').output.value",
+								"type": "Expression"
+							},
+							"batchCount": 3,
+							"activities": [
+								{
+									"name": "copy into adls from postgres",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Load Type check",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "PostgreSqlV2Source",
+											"query": {
+												"value": "@concat(\n    'SELECT * FROM ',\n    item().source_table_name,\n    if(\n        equals(item().load_type,'FULL'),\n        '',\n        concat(\n            ' WHERE ',\n            item().watermark_column,\n            ' > ',\n            '''',\n            string(variables('watermark_date')),\n            ''''\n        )\n    )\n)",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "PostgreSqlTable_DS",
+											"type": "DatasetReference",
+											"parameters": {
+												"table_name": {
+													"value": "@item().source_table_name",
+													"type": "Expression"
+												},
+												"schema_name": "public"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "Parquet_DS",
+											"type": "DatasetReference",
+											"parameters": {
+												"folder_name": {
+													"value": "@concat(item().source_schema_name,'/',item().source_table_name,'/',variables('start_date'))",
+													"type": "Expression"
+												},
+												"source_name": {
+													"value": "@item().source_schema_name",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "print tables",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"policy": {
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "start_date",
+										"value": {
+											"value": "@formatDateTime(utcNow(),'dd-MM-yyyy')",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "landing to bronze",
+									"type": "DatabricksNotebook",
+									"dependsOn": [
+										{
+											"activity": "copy into adls from postgres",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"notebookPath": "/Users/baddireddy.manikantha@gmail.com/adls connection test",
+										"baseParameters": {
+											"table_name": {
+												"value": "@item().source_table_name",
+												"type": "Expression"
+											},
+											"watermark_col": {
+												"value": "@if(empty(item().watermark_column),'',string(item().watermark_column))",
+												"type": "Expression"
+											},
+											"date_timestamp": {
+												"value": "@variables('start_date')",
+												"type": "Expression"
+											},
+											"merge_key": {
+												"value": "@if(empty(item().merge_keys),'',string(item().merge_keys))",
+												"type": "Expression"
+											},
+											"Load_Type": {
+												"value": "@item().load_type",
+												"type": "Expression"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "AzureDatabricks_LS",
+										"type": "LinkedServiceReference"
+									}
+								},
+								{
+									"name": "Insert audit table",
+									"type": "Script",
+									"dependsOn": [
+										{
+											"activity": "print tables",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"linkedServiceName": {
+										"referenceName": "AzureSqlDatabase_LS",
+										"type": "LinkedServiceReference"
+									},
+									"typeProperties": {
+										"scripts": [
+											{
+												"type": "Query",
+												"text": {
+													"value": "@concat(\n'INSERT INTO ctrl.audit_log (adf_run_id, table_id, stage, status, records_written, start_time, end_time, created_timestamp) VALUES (',\n'''', pipeline().RunId, ''', ',\nstring(item().table_id), ', ',\n'''SOURCE_TO_LANDING'', ',\n'''IN-PROGRESS'', ',\n'NULL, ',\n'GETDATE(), ',\n'NULL, ',\n'GETDATE()',\n')'\n)",
+													"type": "Expression"
+												}
+											}
+										],
+										"scriptBlockExecutionTimeout": "02:00:00"
+									}
+								},
+								{
+									"name": "update audit table",
+									"type": "Script",
+									"dependsOn": [
+										{
+											"activity": "copy into adls from postgres",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"linkedServiceName": {
+										"referenceName": "AzureSqlDatabase_LS",
+										"type": "LinkedServiceReference"
+									},
+									"typeProperties": {
+										"scripts": [
+											{
+												"type": "Query",
+												"text": {
+													"value": "@concat(\n'UPDATE ctrl.audit_log SET status=''COMPLETED'', end_time=GETDATE(), records_written=',\nstring(activity('copy into adls from postgres').output.rowsCopied),\n' WHERE table_id=',\n'''',string(item().table_id),'''',\n'AND status=''IN-PROGRESS'''\n)",
+													"type": "Expression"
+												}
+											}
+										],
+										"scriptBlockExecutionTimeout": "02:00:00"
+									}
+								},
+								{
+									"name": "update audit table failed",
+									"type": "Script",
+									"dependsOn": [
+										{
+											"activity": "copy into adls from postgres",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"linkedServiceName": {
+										"referenceName": "AzureSqlDatabase_LS",
+										"type": "LinkedServiceReference"
+									},
+									"typeProperties": {
+										"scripts": [
+											{
+												"type": "Query",
+												"text": {
+													"value": "@concat(\n'UPDATE ctrl.audit_log SET ',\n'status=''FAILLED'', ',\n'end_time=GETDATE(), ',\n'comment=''', \nreplace(activity('copy into adls from postgres').error.message,'''',''''''),\n''' ',\n'WHERE table_id=',\nstring(item().table_id)\n)",
+													"type": "Expression"
+												}
+											}
+										],
+										"scriptBlockExecutionTimeout": "02:00:00"
+									}
+								},
+								{
+									"name": "Load Type check",
+									"type": "IfCondition",
+									"dependsOn": [
+										{
+											"activity": "print tables",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@not(equals(item().load_type,'FULL'))",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "Lookupforwayermark",
+												"type": "Lookup",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
+														"sqlReaderQuery": {
+															"value": "@concat('SELECT WATERMARK_VALUE FROM ctrl.WATERMARK\nWHERE TABLE_ID=',item().table_id)",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "AzureSqlTables_DS",
+														"type": "DatasetReference",
+														"parameters": {}
+													},
+													"firstRowOnly": false
+												}
+											},
+											{
+												"name": "watermark",
+												"type": "SetVariable",
+												"dependsOn": [
+													{
+														"activity": "Lookupforwayermark",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "watermark_date",
+													"value": {
+														"value": "@activity('Lookupforwayermark').output.value[0].WATERMARK_VALUE",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"table": {
+						"type": "String"
+					},
+					"start_date": {
+						"type": "String"
+					},
+					"watermark_date": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Insurance"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTables_DS')]",
+				"[concat(variables('factoryId'), '/datasets/PostgreSqlTable_DS')]",
+				"[concat(variables('factoryId'), '/datasets/Parquet_DS')]",
+				"[concat(variables('factoryId'), '/linkedServices/AzureDatabricks_LS')]",
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlTables_DS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase_LS",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Parquet_DS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage_LS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"folder_name": {
+						"type": "string"
+					},
+					"source_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().folder_name",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().source_name",
+							"type": "Expression"
+						}
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PostgreSqlTable_DS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "PostgreSql_LS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"table_name": {
+						"type": "string"
+					},
+					"schema_name": {
+						"type": "string",
+						"defaultValue": "public"
+					}
+				},
+				"annotations": [],
+				"type": "PostgreSqlV2Table",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().schema_name",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().table_name",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/PostgreSql_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureDataLakeStorage_LS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorage_LS_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('AzureDataLakeStorage_LS_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureDatabricks_LS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureDatabricks",
+				"typeProperties": {
+					"domain": "https://adb-7405617920893283.3.azuredatabricks.net",
+					"accessToken": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "AzureKeyVault_LS",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "databricks-tokens"
+					},
+					"existingClusterId": "[parameters('AzureDatabricks_LS_properties_typeProperties_existingClusterId')]"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureKeyVault_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureKeyVault_LS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('AzureKeyVault_LS_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabase_LS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('AzureSqlDatabase_LS_properties_typeProperties_server')]",
+					"database": "[parameters('AzureSqlDatabase_LS_properties_typeProperties_database')]",
+					"encrypt": "optional",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('AzureSqlDatabase_LS_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "AzureKeyVault_LS",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "sqlpwd"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureKeyVault_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PostgreSql_LS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "PostgreSqlV2",
+				"typeProperties": {
+					"server": "[parameters('PostgreSql_LS_properties_typeProperties_server')]",
+					"port": 5432,
+					"database": "[parameters('PostgreSql_LS_properties_typeProperties_database')]",
+					"username": "[parameters('PostgreSql_LS_properties_typeProperties_username')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "AzureKeyVault_LS",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "postgrespwd"
+					},
+					"sslMode": 2,
+					"authenticationType": "Basic"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureKeyVault_LS')]"
+			]
+		}
+	]
+}
